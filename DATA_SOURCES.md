@@ -1,7 +1,7 @@
 # Data Sourcing Methodology
 
 ## Overview
-The Sudarshan leads Portal utilizes a sophisticated web crawling system to gather publicly available real estate data from various online sources. This document outlines our data collection methodology and sources.
+The Endless Leads Portal utilizes a sophisticated web crawling system to gather publicly available real estate data from various online sources. This document outlines our data collection methodology and sources.
 
 ## Data Sources
 

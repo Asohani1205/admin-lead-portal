@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const sidebar = document.getElementById('sidebar');
     sidebar.innerHTML = `
         <div class="w-64 bg-gray-800 p-4 h-full">
-            <div class="text-xl font-bold mb-8">Sudarshan leads Portal</div>
+            <div class="text-xl font-bold mb-8">Endless Leads Portal</div>
             <nav>
                 <a href="/index.html" class="block py-2 px-4 text-gray-300 hover:bg-gray-700 rounded mb-2">Dashboard</a>
                 <a href="/pages/web-crawler.html" class="block py-2 px-4 text-gray-300 hover:bg-gray-700 rounded mb-2">Web Crawler</a>
