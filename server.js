@@ -5,7 +5,7 @@ const io = require('socket.io')(http, {
   cors: {
     origin: [
       "http://localhost:8080",
-      "https://sudarshanportal.netlify.app",
+      "https://endlessportal.netlify.app",
       "http://localhost:3000"
     ],
     methods: ["GET", "POST"],
@@ -25,7 +25,7 @@ connectDB();
 app.use(cors({
   origin: [
     "http://localhost:8080",
-    "https://sudarshanportal.netlify.app",
+    "https://endlessportal.netlify.app",
     "http://localhost:3000"
   ],
   credentials: true
