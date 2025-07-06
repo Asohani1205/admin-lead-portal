@@ -84,7 +84,7 @@ async function loadInitialLeads() {
 function calculateLeadEmissionInterval() {
   // Calculate total time in milliseconds for 24 hours
   const totalTime = 24 * 60 * 60 * 1000; // 24 hours
-  const totalLeadsToEmit = 70; // Target 70 leads per day
+  const totalLeadsToEmit = 800; // Target 800 leads per day
   const averageInterval = totalTime / totalLeadsToEmit;
 
   // Add some randomness (±30% of average interval)
@@ -277,7 +277,7 @@ http.listen(PORT, async () => {
   if (systemReady) {
     // Start the global lead emission loop once the system is ready
     console.log('Starting global lead emission schedule...');
-    scheduledLeadEmitter(); 
+    scheduledLeadEmitter();
   } else {
     console.error("System initialization failed. Lead emission schedule not started.");
   }

@@ -146,7 +146,7 @@ function updatePagination(data) {
 // Change page
 function changePage(page) {
     currentPage = page;
-    loadLeads();
+    loadLeads(); // Force refresh when changing pages
 }
 
 // Edit lead
@@ -172,25 +172,25 @@ async function deleteLead(leadId) {
 searchInput?.addEventListener('input', debounce(() => {
     currentFilters.search = searchInput.value;
     currentPage = 1;
-    loadLeads();
+    loadLeads(); // Force refresh when searching
 }, 300));
 
 priorityFilter?.addEventListener('change', () => {
     currentFilters.priority = priorityFilter.value;
     currentPage = 1;
-    loadLeads();
+    loadLeads(); // Force refresh when filtering
 });
 
 sourceFilter?.addEventListener('change', () => {
     currentFilters.source = sourceFilter.value;
     currentPage = 1;
-    loadLeads();
+    loadLeads(); // Force refresh when filtering
 });
 
 dateRangeFilter?.addEventListener('change', () => {
     currentFilters.dateRange = dateRangeFilter.value;
     currentPage = 1;
-    loadLeads();
+    loadLeads(); // Force refresh when filtering
 });
 
 // Socket event handler for new leads
@@ -261,37 +261,37 @@ socket.on('newLead', (lead) => {
 // Handle page visibility changes
 document.addEventListener('visibilitychange', () => {
     if (!document.hidden) {
-        loadLeads(); // Reload leads when tab becomes visible
+        loadLeads(); // Force refresh when tab becomes visible
     }
 });
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
-    loadLeads();
+    loadLeads(); // Force refresh on initial load
     
     // Add event listeners for filters
     searchInput?.addEventListener('input', debounce(() => {
         currentFilters.search = searchInput.value;
         currentPage = 1;
-        loadLeads();
+        loadLeads(); // Force refresh when searching
     }, 300));
 
     priorityFilter?.addEventListener('change', () => {
         currentFilters.priority = priorityFilter.value;
         currentPage = 1;
-        loadLeads();
+        loadLeads(); // Force refresh when filtering
     });
 
     sourceFilter?.addEventListener('change', () => {
         currentFilters.source = sourceFilter.value;
         currentPage = 1;
-        loadLeads();
+        loadLeads(); // Force refresh when filtering
     });
 
     dateRangeFilter?.addEventListener('change', () => {
         currentFilters.dateRange = dateRangeFilter.value;
         currentPage = 1;
-        loadLeads();
+        loadLeads(); // Force refresh when filtering
     });
 });
 
