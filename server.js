@@ -41,6 +41,10 @@ let activeLeads = [];
 // Add fetching toggle
 let isFetching = false;
 
+// Add serialized lead tracking
+let serializedLeadIndex = 0;
+let totalLeadsInDB = 0;
+
 let stats = {
   dailyLeadsCount: 0,
   yesterdayLeadsCount: 35,
@@ -72,7 +76,9 @@ async function loadInitialLeads() {
   try {
     console.log('Initializing lead generation system...');
     leadsData = await Lead.find({}).sort({ timestamp: -1 });
-    console.log(`System ready with ${leadsData.length} potential leads`);
+    totalLeadsInDB = leadsData.length;
+    serializedLeadIndex = 0;
+    console.log(`System ready with ${leadsData.length} potential leads for serialized emission`);
     return true;
   } catch (error) {
     console.error('Error initializing system:', error.message);
@@ -98,11 +104,10 @@ function calculateLeadEmissionInterval() {
 // Function to emit a new lead
 async function emitNewLead() {
   try {
-    // Get a random lead from MongoDB
-    const leads = await Lead.find({});
-    if (leads.length > 0) {
-      const randomIndex = Math.floor(Math.random() * leads.length);
-      const lead = leads[randomIndex];
+    // Check if we have leads in memory
+    if (leadsData.length > 0) {
+      // Get the next lead in sequence
+      const lead = leadsData[serializedLeadIndex];
       
       // Get the next source in sequence
       lead.source = sources[sourceIndex];
@@ -110,7 +115,10 @@ async function emitNewLead() {
       
       // Emit the lead to all connected clients
       io.emit('newLead', lead);
-      console.log('Emitted lead:', lead.name, 'from source:', lead.source);
+      console.log(`Emitted lead ${serializedLeadIndex + 1}/${totalLeadsInDB}:`, lead.name, 'from source:', lead.source);
+      
+      // Move to next lead in sequence
+      serializedLeadIndex = (serializedLeadIndex + 1) % totalLeadsInDB;
     } else {
       console.log('No leads found in database');
     }
