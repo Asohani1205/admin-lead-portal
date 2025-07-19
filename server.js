@@ -84,7 +84,7 @@ async function loadInitialLeads() {
 function calculateLeadEmissionInterval() {
   // Calculate total time in milliseconds for 24 hours
   const totalTime = 24 * 60 * 60 * 1000; // 24 hours
-  const totalLeadsToEmit = 800; // Target 800 leads per day
+  const totalLeadsToEmit = 360; // Target 360 leads per day (15 per hour * 24 hours)
   const averageInterval = totalTime / totalLeadsToEmit;
 
   // Add some randomness (±30% of average interval)
