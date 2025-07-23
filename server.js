@@ -41,6 +41,9 @@ let activeLeads = [];
 // Add fetching toggle
 let isFetching = false;
 
+// Add global fetching disable flag
+let isFetchingGloballyDisabled = false;
+
 // Add serialized lead tracking
 let serializedLeadIndex = 0;
 let totalLeadsInDB = 0;
@@ -239,7 +242,7 @@ app.get('/api/test-db', async (req, res) => {
 // Global lead emission loop
 async function scheduledLeadEmitter() {
   try {
-    if (isFetching) {
+    if (isFetching && !isFetchingGloballyDisabled) {
       await emitNewLead();
     }
   } catch (error) {
@@ -260,6 +263,10 @@ io.on('connection', async (socket) => {
 
 // API to start fetching
 app.post('/api/start-fetching', (req, res) => {
+  if (isFetchingGloballyDisabled) {
+    console.log('Fetching is globally disabled. Ignoring start request.');
+    return res.status(403).json({ status: 'disabled', message: 'Fetching is globally disabled by admin.' });
+  }
   isFetching = true;
   console.log('Fetching started (isFetching = true)');
   res.json({ status: 'started' });
@@ -270,6 +277,21 @@ app.post('/api/stop-fetching', (req, res) => {
   isFetching = false;
   console.log('Fetching stopped (isFetching = false)');
   res.json({ status: 'stopped' });
+});
+
+// API to globally disable fetching
+app.post('/api/disable-fetching', (req, res) => {
+  isFetchingGloballyDisabled = true;
+  isFetching = false;
+  console.log('Fetching is now globally disabled by admin.');
+  res.json({ status: 'globally_disabled' });
+});
+
+// API to globally enable fetching
+app.post('/api/enable-fetching', (req, res) => {
+  isFetchingGloballyDisabled = false;
+  console.log('Fetching is now globally enabled by admin.');
+  res.json({ status: 'globally_enabled' });
 });
 
 // API to get fetching status
