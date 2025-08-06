@@ -34,6 +34,16 @@ app.use(cors({
 app.use(express.json());
 app.use(express.static('public'));
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    memory: process.memoryUsage()
+  });
+});
+
 // Store leads data and stats
 let leadsData = [];
 let currentLeadIndex = 0;
@@ -590,14 +600,52 @@ app.post('/api/lead-emission-config', (req, res) => {
 
 // Start server
 const PORT = process.env.PORT || 3000;
-http.listen(PORT, async () => {
+const server = http.listen(PORT, async () => {
   console.log(`Server is running on port ${PORT}`);
-  const systemReady = await loadInitialLeads();
-  if (systemReady) {
-    // Start the global lead emission loop once the system is ready
-    console.log('Starting global lead emission schedule...');
-    scheduledLeadEmitter();
-  } else {
-    console.error("System initialization failed. Lead emission schedule not started.");
+  try {
+    const systemReady = await loadInitialLeads();
+    if (systemReady) {
+      // Start the global lead emission loop once the system is ready
+      console.log('Starting global lead emission schedule...');
+      scheduledLeadEmitter();
+    } else {
+      console.error("System initialization failed. Lead emission schedule not started.");
+    }
+  } catch (error) {
+    console.error('Error during server startup:', error);
   }
+});
+
+// Handle graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully...');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received, shutting down gracefully...');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  server.close(() => {
+    console.log('Server closed due to uncaught exception');
+    process.exit(1);
+  });
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  server.close(() => {
+    console.log('Server closed due to unhandled rejection');
+    process.exit(1);
+  });
 }); 

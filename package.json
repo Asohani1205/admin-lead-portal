@@ -8,7 +8,9 @@
     "dev": "nodemon server.js",
     "import": "node scripts/importLeads.js",
     "sync-db": "node scripts/sync-db.js",
-    "test-db": "node scripts/test-connection.js"
+    "test-db": "node scripts/test-connection.js",
+    "deploy": "bash deploy.sh",
+    "postinstall": "echo 'Post-install script completed'"
   },
   "keywords": [],
   "author": "",
