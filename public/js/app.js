@@ -261,8 +261,19 @@ async function testConnection() {
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('Page loaded, testing connection...');
+    console.log('Current location:', window.location.href);
+    console.log('API_BASE_URL:', API_BASE_URL);
+    
     const isConnected = await testConnection();
     console.log('Connection test result:', isConnected);
+    
+    if (!isConnected) {
+        console.error('Failed to connect to backend. Please check the deployment URL.');
+        if (toggleFetchingBtn) {
+            toggleFetchingBtn.textContent = 'Backend Unavailable';
+            toggleFetchingBtn.disabled = true;
+        }
+    }
     
     updateFetchingStatus();
     updateStatsDisplay();
