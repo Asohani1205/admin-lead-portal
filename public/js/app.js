@@ -119,17 +119,25 @@ const downloadDailyLeadsBtn = document.getElementById('downloadDailyLeadsBtn');
 
 async function updateFetchingStatus() {
     try {
+        console.log('Attempting to connect to:', `${API_BASE_URL}/api/fetching-status`);
         const res = await fetch(`${API_BASE_URL}/api/fetching-status`);
+        console.log('Response status:', res.status);
+        
         if (!res.ok) {
             throw new Error(`HTTP error! status: ${res.status}`);
         }
         const data = await res.json();
+        console.log('Fetching status data:', data);
+        
         if (toggleFetchingBtn) {
             toggleFetchingBtn.textContent = data.isFetching ? 'Stop Fetching' : 'Start Fetching';
             toggleFetchingBtn.disabled = false;
         }
     } catch (error) {
         console.error('Error updating fetching status:', error);
+        console.error('API_BASE_URL:', API_BASE_URL);
+        console.error('Current location:', window.location.href);
+        
         if (toggleFetchingBtn) {
             toggleFetchingBtn.textContent = 'Connection Error';
             toggleFetchingBtn.disabled = false;
@@ -237,7 +245,25 @@ downloadDailyLeadsBtn?.addEventListener('click', async () => {
     }
 });
 
-document.addEventListener('DOMContentLoaded', () => {
+// Test connection function
+async function testConnection() {
+    try {
+        console.log('Testing connection to:', `${API_BASE_URL}/health`);
+        const response = await fetch(`${API_BASE_URL}/health`);
+        const data = await response.json();
+        console.log('Health check response:', data);
+        return true;
+    } catch (error) {
+        console.error('Connection test failed:', error);
+        return false;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('Page loaded, testing connection...');
+    const isConnected = await testConnection();
+    console.log('Connection test result:', isConnected);
+    
     updateFetchingStatus();
     updateStatsDisplay();
     loadRecentLeads(); // Load recent leads on page load

@@ -69,8 +69,10 @@ function showNotification(message, type = 'success') {
     }, 3000);
 }
 
-// Set the backend API base URL for local development
-const API_BASE_URL = "http://localhost:3000";
+// Set the backend API base URL dynamically
+const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+    ? "http://localhost:3000" 
+    : window.location.origin;
 
 // API request helper function
 async function apiRequest(endpoint, options = {}) {
