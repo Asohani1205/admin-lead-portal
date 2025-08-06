@@ -174,30 +174,36 @@ async function emitNewLead() {
       return;
     }
     
-    // Check if we have leads in memory
-    if (leadsData.length > 0) {
-      // Randomly select a lead instead of sequential
-      const randomIndex = Math.floor(Math.random() * leadsData.length);
-      const lead = { ...leadsData[randomIndex] }; // Create a copy to avoid modifying original
+          // Check if we have leads in memory
+      if (leadsData.length > 0) {
+        // Randomly select a lead instead of sequential
+        const randomIndex = Math.floor(Math.random() * leadsData.length);
+        const lead = leadsData[randomIndex]; // Get the original lead object
+        
+        // Create a copy for emission
+        const leadForEmission = { ...lead };
+        
+        // Randomly select a source (if configured)
+        if (LEAD_EMISSION_CONFIG.randomizeSources) {
+          const randomSourceIndex = Math.floor(Math.random() * sources.length);
+          leadForEmission.source = sources[randomSourceIndex];
+        }
+        
+        // Increment daily count
+        dailyLeadCount++;
+        
+        // Update the lead in database with emitted timestamp and source
+        console.log('Updating lead in database:', lead._id, 'with source:', leadForEmission.source);
+        const updateResult = await Lead.findByIdAndUpdate(lead._id, {
+          source: leadForEmission.source,
+          emittedAt: new Date()
+        });
+        console.log('Database update result:', updateResult);
       
-      // Randomly select a source (if configured)
-      if (LEAD_EMISSION_CONFIG.randomizeSources) {
-        const randomSourceIndex = Math.floor(Math.random() * sources.length);
-        lead.source = sources[randomSourceIndex];
-      }
-      
-      // Increment daily count
-      dailyLeadCount++;
-      
-      // Update the lead in database with emitted timestamp and source
-      await Lead.findByIdAndUpdate(lead._id, {
-        source: lead.source,
-        emittedAt: new Date()
-      });
-      
-      // Emit the lead to all connected clients
-      io.emit('newLead', lead);
-      console.log(`Emitted lead ${randomIndex + 1}/${totalLeadsInDB} (Daily: ${dailyLeadCount}/${MAX_DAILY_LEADS}):`, lead.name, 'from source:', lead.source);
+              // Emit the lead to all connected clients
+        console.log('Emitting lead to clients:', leadForEmission);
+        io.emit('newLead', leadForEmission);
+        console.log(`Emitted lead ${randomIndex + 1}/${totalLeadsInDB} (Daily: ${dailyLeadCount}/${MAX_DAILY_LEADS}):`, lead.name, 'from source:', leadForEmission.source);
       
       // Remove the emitted lead from the pool to avoid duplicates (if configured)
       if (LEAD_EMISSION_CONFIG.avoidDuplicates) {
@@ -522,6 +528,38 @@ app.get('/api/download-daily-leads', async (req, res) => {
 // API to get fetching status
 app.get('/api/fetching-status', (req, res) => {
   res.json({ isFetching });
+});
+
+// API to get current daily lead count
+app.get('/api/daily-lead-count', (req, res) => {
+  res.json({ 
+    dailyLeadCount,
+    maxDailyLeads: MAX_DAILY_LEADS,
+    lastResetDate,
+    isWithinWorkingHours: isWithinWorkingHours(),
+    workingHoursOnly: LEAD_EMISSION_CONFIG.workingHoursOnly
+  });
+});
+
+// API to manually trigger a lead emission (for testing)
+app.post('/api/emit-test-lead', async (req, res) => {
+  try {
+    await emitNewLead();
+    res.json({ status: 'success', message: 'Test lead emitted' });
+  } catch (error) {
+    console.error('Error emitting test lead:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// API to check leads data in memory
+app.get('/api/leads-data-status', (req, res) => {
+  res.json({ 
+    leadsDataLength: leadsData.length,
+    totalLeadsInDB,
+    isFetching,
+    isFetchingGloballyDisabled
+  });
 });
 
 // API to get lead emission configuration

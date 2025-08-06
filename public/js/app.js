@@ -15,11 +15,17 @@ let totalLeadsProcessed = 0;
 
 // Create activity feed item
 function createActivityItem(lead) {
+    console.log('Creating activity item for lead:', lead);
+    
     const item = document.createElement('div');
     item.className = 'bg-gray-700 p-4 rounded-lg';
     
-    const timeAgo = Math.floor((Date.now() - new Date(lead.timestamp)) / 1000);
+    // Use emittedAt if available, otherwise use timestamp
+    const timestamp = lead.emittedAt || lead.timestamp;
+    const timeAgo = Math.floor((Date.now() - new Date(timestamp)) / 1000);
     const timeString = timeAgo < 60 ? `${timeAgo}s ago` : `${Math.floor(timeAgo / 60)}m ago`;
+
+    console.log('Timestamp calculation:', { timestamp, timeAgo, timeString });
 
     // Define source badge colors
     const sourceBadgeColors = {
@@ -33,9 +39,11 @@ function createActivityItem(lead) {
     const sourceColor = sourceBadgeColors[lead.source.toLowerCase()] || 'bg-gray-600';
 
     // Only show content if it exists
-    const name = lead.name ? lead.name : '';
+    const name = lead.name ? lead.name : 'Unknown Lead';
     const mobile = lead.mobile ? lead.mobile : '';
     const address = lead.address ? lead.address : '';
+
+    console.log('Lead data for display:', { name, mobile, address, source: lead.source });
 
     item.innerHTML = `
         <div class="flex justify-between items-start">
@@ -98,6 +106,7 @@ socket.on('connect', () => {
 });
 
 socket.on('newLead', (lead) => {
+    console.log('Received new lead:', lead);
     createActivityItem(lead);
     todayLeads++;
     totalLeadsProcessed++;
