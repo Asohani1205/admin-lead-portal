@@ -26,19 +26,25 @@ if (typeof socket === 'undefined') {
 // Load leads data
 async function loadLeads() {
     try {
+        console.log('Loading leads...');
         const queryParams = new URLSearchParams({
             page: currentPage,
             limit: 10,
             ...currentFilters
         });
         
+        console.log('API URL:', `${API_BASE_URL}/api/leads?${queryParams}`);
         const data = await apiRequest(`/api/leads?${queryParams}`);
+        
+        console.log('Received data:', data);
         
         if (data && Array.isArray(data.leads)) {
             cachedLeads = data.leads;
+            console.log('Rendering leads:', data.leads.length, 'leads');
             renderLeads(data.leads);
             updatePagination(data);
             totalLeadsCount.textContent = data.total;
+            console.log('Leads loaded successfully');
         } else {
             throw new Error('Invalid data format received from server');
         }
@@ -52,11 +58,13 @@ async function loadLeads() {
 
 // Render leads in table
 function renderLeads(leads) {
+    console.log('Rendering leads function called with:', leads);
     if (!Array.isArray(leads)) {
         console.error('Invalid leads data:', leads);
         return;
     }
 
+    console.log('Leads table body element:', leadsTableBody);
     leadsTableBody.innerHTML = leads.map(lead => `
         <tr class="hover:bg-gray-700">
             <td class="px-1 py-1 w-4">
@@ -267,6 +275,14 @@ document.addEventListener('visibilitychange', () => {
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM Content Loaded');
+    console.log('Leads table body element:', leadsTableBody);
+    console.log('Total leads count element:', totalLeadsCount);
+    console.log('Search input element:', searchInput);
+    console.log('Priority filter element:', priorityFilter);
+    console.log('Source filter element:', sourceFilter);
+    console.log('Date range filter element:', dateRangeFilter);
+    
     loadLeads(); // Force refresh on initial load
     
     // Add event listeners for filters
@@ -323,4 +339,79 @@ toggleFetchingBtn?.addEventListener('click', async () => {
 });
 
 // On page load, set the correct button text
-updateFetchingStatus(); 
+updateFetchingStatus();
+
+// Configuration modal functionality
+const configBtn = document.getElementById('configBtn');
+const configModal = document.getElementById('configModal');
+const cancelConfig = document.getElementById('cancelConfig');
+const saveConfig = document.getElementById('saveConfig');
+
+// Load current configuration
+async function loadConfiguration() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/lead-emission-config`);
+        const config = await response.json();
+        
+        document.getElementById('minInterval').value = config.minIntervalSeconds;
+        document.getElementById('maxInterval').value = config.maxIntervalSeconds;
+        document.getElementById('burstChance').value = Math.round(config.burstModeChance * 100);
+        document.getElementById('slowChance').value = Math.round(config.slowModeChance * 100);
+        document.getElementById('workingHoursOnly').checked = config.workingHoursOnly;
+        document.getElementById('randomizeSources').checked = config.randomizeSources;
+        document.getElementById('avoidDuplicates').checked = config.avoidDuplicates;
+    } catch (error) {
+        console.error('Error loading configuration:', error);
+    }
+}
+
+// Show configuration modal
+configBtn?.addEventListener('click', () => {
+    configModal.classList.remove('hidden');
+    loadConfiguration();
+});
+
+// Hide configuration modal
+cancelConfig?.addEventListener('click', () => {
+    configModal.classList.add('hidden');
+});
+
+// Save configuration
+saveConfig?.addEventListener('click', async () => {
+    try {
+        const config = {
+            minIntervalSeconds: parseInt(document.getElementById('minInterval').value),
+            maxIntervalSeconds: parseInt(document.getElementById('maxInterval').value),
+            burstModeChance: parseInt(document.getElementById('burstChance').value) / 100,
+            slowModeChance: parseInt(document.getElementById('slowChance').value) / 100,
+            workingHoursOnly: document.getElementById('workingHoursOnly').checked,
+            randomizeSources: document.getElementById('randomizeSources').checked,
+            avoidDuplicates: document.getElementById('avoidDuplicates').checked
+        };
+        
+        const response = await fetch(`${API_BASE_URL}/api/lead-emission-config`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(config)
+        });
+        
+        if (response.ok) {
+            showNotification('Configuration saved successfully');
+            configModal.classList.add('hidden');
+        } else {
+            showNotification('Failed to save configuration', 'error');
+        }
+    } catch (error) {
+        console.error('Error saving configuration:', error);
+        showNotification('Failed to save configuration', 'error');
+    }
+});
+
+// Close modal when clicking outside
+configModal?.addEventListener('click', (e) => {
+    if (e.target === configModal) {
+        configModal.classList.add('hidden');
+    }
+}); 

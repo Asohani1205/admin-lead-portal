@@ -25,6 +25,9 @@
                     <button id="toggleFetchingBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg whitespace-nowrap">
                         Start Fetching
                     </button>
+                    <button id="configBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg whitespace-nowrap">
+                        Configure Timing
+                    </button>
                 </div>
             </div>
 
@@ -76,6 +79,49 @@
             <!-- Pagination -->
             <div id="pagination" class="flex justify-center space-x-2 mt-6">
                 <!-- Pagination will be dynamically inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuration Modal -->
+    <div id="configModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md">
+                <h3 class="text-xl font-bold mb-4">Lead Emission Configuration</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Min Interval (seconds)</label>
+                        <input type="number" id="minInterval" class="w-full bg-gray-700 px-3 py-2 rounded" min="1" max="60">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Max Interval (seconds)</label>
+                        <input type="number" id="maxInterval" class="w-full bg-gray-700 px-3 py-2 rounded" min="5" max="600">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Burst Mode Chance (%)</label>
+                        <input type="number" id="burstChance" class="w-full bg-gray-700 px-3 py-2 rounded" min="0" max="50" step="5">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Slow Mode Chance (%)</label>
+                        <input type="number" id="slowChance" class="w-full bg-gray-700 px-3 py-2 rounded" min="0" max="50" step="5">
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="workingHoursOnly" class="mr-2">
+                        <label class="text-sm">Working Hours Only</label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="randomizeSources" class="mr-2">
+                        <label class="text-sm">Randomize Sources</label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="avoidDuplicates" class="mr-2">
+                        <label class="text-sm">Avoid Duplicates</label>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-3 mt-6">
+                    <button id="cancelConfig" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded">Cancel</button>
+                    <button id="saveConfig" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded">Save</button>
+                </div>
             </div>
         </div>
     </div>

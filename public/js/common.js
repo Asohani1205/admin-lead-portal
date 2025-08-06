@@ -6,9 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="text-xl font-bold mb-8">Endless Leads Portal</div>
             <nav>
                 <a href="/index.html" class="block py-2 px-4 text-gray-300 hover:bg-gray-700 rounded mb-2">Dashboard</a>
-                <a href="/pages/web-crawler.html" class="block py-2 px-4 text-gray-300 hover:bg-gray-700 rounded mb-2">Web Crawler</a>
                 <a href="/pages/leads.html" class="block py-2 px-4 text-gray-300 hover:bg-gray-700 rounded mb-2">Leads</a>
-                <a href="/pages/settings.html" class="block py-2 px-4 text-gray-300 hover:bg-gray-700 rounded">Settings</a>
             </nav>
         </div>
     `;
@@ -71,8 +69,8 @@ function showNotification(message, type = 'success') {
     }, 3000);
 }
 
-// Set the backend API base URL for production
-const API_BASE_URL = "https://admin-lead-portal-production-7382.up.railway.app";
+// Set the backend API base URL for local development
+const API_BASE_URL = "http://localhost:3000";
 
 // API request helper function
 async function apiRequest(endpoint, options = {}) {

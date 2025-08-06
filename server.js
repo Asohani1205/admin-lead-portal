@@ -54,6 +54,17 @@ let dailyLeadCount = 0;
 let lastResetDate = new Date().toDateString();
 const MAX_DAILY_LEADS = 21;
 
+// Lead emission configuration
+const LEAD_EMISSION_CONFIG = {
+  minIntervalSeconds: 5,        // Minimum time between leads (seconds)
+  maxIntervalSeconds: 300,      // Maximum time between leads (seconds)
+  burstModeChance: 0.1,        // 10% chance of burst mode (faster emission)
+  slowModeChance: 0.1,         // 10% chance of slow mode (slower emission)
+  workingHoursOnly: true,       // Only emit during working hours
+  randomizeSources: true,       // Randomly assign sources
+  avoidDuplicates: false        // Whether to avoid emitting the same lead twice
+};
+
 let stats = {
   dailyLeadsCount: 0,
   yesterdayLeadsCount: 35,
@@ -103,12 +114,29 @@ function calculateLeadEmissionInterval() {
   const totalLeadsToEmit = MAX_DAILY_LEADS; // 21 leads per day
   const averageInterval = totalWorkingTime / totalLeadsToEmit;
 
-  // Add some randomness (±30% of average interval)
-  const randomFactor = 0.3;
+  // Add more randomness (±50% of average interval for more variation)
+  const randomFactor = 0.5;
   const minInterval = averageInterval * (1 - randomFactor);
   const maxInterval = averageInterval * (1 + randomFactor);
 
-  return Math.floor(Math.random() * (maxInterval - minInterval + 1) + minInterval);
+  // Add extra randomness: sometimes emit leads faster or slower
+  const extraRandomness = Math.random();
+  let finalInterval;
+  
+  if (extraRandomness < LEAD_EMISSION_CONFIG.burstModeChance) {
+    // Burst mode: very fast emission
+    finalInterval = Math.random() * (LEAD_EMISSION_CONFIG.minIntervalSeconds * 1000 * 2);
+  } else if (extraRandomness < (LEAD_EMISSION_CONFIG.burstModeChance + LEAD_EMISSION_CONFIG.slowModeChance)) {
+    // Slow mode: slower emission
+    finalInterval = averageInterval * (1.5 + Math.random() * 1);
+  } else {
+    // Normal mode: random interval within configured bounds
+    const minMs = LEAD_EMISSION_CONFIG.minIntervalSeconds * 1000;
+    const maxMs = LEAD_EMISSION_CONFIG.maxIntervalSeconds * 1000;
+    finalInterval = Math.floor(Math.random() * (maxMs - minMs + 1) + minMs);
+  }
+
+  return Math.max(LEAD_EMISSION_CONFIG.minIntervalSeconds * 1000, Math.floor(finalInterval));
 }
 
 // Function to check if current time is within working hours
@@ -134,8 +162,8 @@ async function emitNewLead() {
     // Reset daily count if it's a new day
     resetDailyCountIfNewDay();
     
-    // Check if we're within working hours
-    if (!isWithinWorkingHours()) {
+    // Check if we're within working hours (if configured)
+    if (LEAD_EMISSION_CONFIG.workingHoursOnly && !isWithinWorkingHours()) {
       console.log(`Outside working hours (${WORK_START_HOUR}:00 - ${WORK_END_HOUR}:00). No leads will be emitted.`);
       return;
     }
@@ -148,12 +176,15 @@ async function emitNewLead() {
     
     // Check if we have leads in memory
     if (leadsData.length > 0) {
-      // Get the next lead in sequence
-      const lead = leadsData[serializedLeadIndex];
+      // Randomly select a lead instead of sequential
+      const randomIndex = Math.floor(Math.random() * leadsData.length);
+      const lead = { ...leadsData[randomIndex] }; // Create a copy to avoid modifying original
       
-      // Get the next source in sequence
-      lead.source = sources[sourceIndex];
-      sourceIndex = (sourceIndex + 1) % sources.length;
+      // Randomly select a source (if configured)
+      if (LEAD_EMISSION_CONFIG.randomizeSources) {
+        const randomSourceIndex = Math.floor(Math.random() * sources.length);
+        lead.source = sources[randomSourceIndex];
+      }
       
       // Increment daily count
       dailyLeadCount++;
@@ -166,10 +197,14 @@ async function emitNewLead() {
       
       // Emit the lead to all connected clients
       io.emit('newLead', lead);
-      console.log(`Emitted lead ${serializedLeadIndex + 1}/${totalLeadsInDB} (Daily: ${dailyLeadCount}/${MAX_DAILY_LEADS}):`, lead.name, 'from source:', lead.source);
+      console.log(`Emitted lead ${randomIndex + 1}/${totalLeadsInDB} (Daily: ${dailyLeadCount}/${MAX_DAILY_LEADS}):`, lead.name, 'from source:', lead.source);
       
-      // Move to next lead in sequence
-      serializedLeadIndex = (serializedLeadIndex + 1) % totalLeadsInDB;
+      // Remove the emitted lead from the pool to avoid duplicates (if configured)
+      if (LEAD_EMISSION_CONFIG.avoidDuplicates) {
+        leadsData.splice(randomIndex, 1);
+        totalLeadsInDB = leadsData.length;
+        console.log(`Remaining leads in pool: ${totalLeadsInDB}`);
+      }
     } else {
       console.log('No leads found in database');
     }
@@ -317,6 +352,8 @@ async function scheduledLeadEmitter() {
     console.error("Error during scheduled lead emission:", error);
   } finally {
     const nextInterval = calculateLeadEmissionInterval();
+    const nextIntervalSeconds = Math.round(nextInterval / 1000);
+    console.log(`Next lead will be emitted in ${nextIntervalSeconds} seconds`);
     setTimeout(scheduledLeadEmitter, nextInterval);
   }
 }
@@ -485,6 +522,32 @@ app.get('/api/download-daily-leads', async (req, res) => {
 // API to get fetching status
 app.get('/api/fetching-status', (req, res) => {
   res.json({ isFetching });
+});
+
+// API to get lead emission configuration
+app.get('/api/lead-emission-config', (req, res) => {
+  res.json(LEAD_EMISSION_CONFIG);
+});
+
+// API to update lead emission configuration
+app.post('/api/lead-emission-config', (req, res) => {
+  try {
+    const { minIntervalSeconds, maxIntervalSeconds, burstModeChance, slowModeChance, workingHoursOnly, randomizeSources, avoidDuplicates } = req.body;
+    
+    if (minIntervalSeconds !== undefined) LEAD_EMISSION_CONFIG.minIntervalSeconds = minIntervalSeconds;
+    if (maxIntervalSeconds !== undefined) LEAD_EMISSION_CONFIG.maxIntervalSeconds = maxIntervalSeconds;
+    if (burstModeChance !== undefined) LEAD_EMISSION_CONFIG.burstModeChance = burstModeChance;
+    if (slowModeChance !== undefined) LEAD_EMISSION_CONFIG.slowModeChance = slowModeChance;
+    if (workingHoursOnly !== undefined) LEAD_EMISSION_CONFIG.workingHoursOnly = workingHoursOnly;
+    if (randomizeSources !== undefined) LEAD_EMISSION_CONFIG.randomizeSources = randomizeSources;
+    if (avoidDuplicates !== undefined) LEAD_EMISSION_CONFIG.avoidDuplicates = avoidDuplicates;
+    
+    console.log('Lead emission configuration updated:', LEAD_EMISSION_CONFIG);
+    res.json({ status: 'success', config: LEAD_EMISSION_CONFIG });
+  } catch (error) {
+    console.error('Error updating lead emission config:', error);
+    res.status(500).json({ error: 'Failed to update configuration' });
+  }
 });
 
 // Start server
