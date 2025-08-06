@@ -6,10 +6,14 @@ const io = require('socket.io')(http, {
     origin: [
       "http://localhost:8080",
       "https://endlessportal.netlify.app",
-      "http://localhost:3000"
+      "http://localhost:3000",
+      "https://admin-lead-portal-production-7382.up.railway.app",
+      "https://admin-lead-portal.railway.app",
+      "*" // Allow all origins for development
     ],
-    methods: ["GET", "POST"],
-    credentials: true
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization']
   }
 });
 const moment = require('moment');
@@ -27,9 +31,14 @@ app.use(cors({
   origin: [
     "http://localhost:8080",
     "https://endlessportal.netlify.app",
-    "http://localhost:3000"
+    "http://localhost:3000",
+    "https://admin-lead-portal-production-7382.up.railway.app",
+    "https://admin-lead-portal.railway.app",
+    "*" // Allow all origins for development
   ],
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 app.use(express.static('public'));
@@ -41,6 +50,20 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     memory: process.memoryUsage()
+  });
+});
+
+// Connection status endpoint
+app.get('/api/connection-status', (req, res) => {
+  res.json({
+    status: 'connected',
+    serverTime: new Date().toISOString(),
+    isFetching,
+    isFetchingGloballyDisabled,
+    dailyLeadCount,
+    maxDailyLeads: MAX_DAILY_LEADS,
+    leadsDataLength: leadsData.length,
+    totalLeadsInDB
   });
 });
 
@@ -384,20 +407,30 @@ io.on('connection', async (socket) => {
 
 // API to start fetching
 app.post('/api/start-fetching', (req, res) => {
-  if (isFetchingGloballyDisabled) {
-    console.log('Fetching is globally disabled. Ignoring start request.');
-    return res.status(403).json({ status: 'disabled', message: 'Fetching is globally disabled by admin.' });
+  try {
+    if (isFetchingGloballyDisabled) {
+      console.log('Fetching is globally disabled. Ignoring start request.');
+      return res.status(403).json({ status: 'disabled', message: 'Fetching is globally disabled by admin.' });
+    }
+    isFetching = true;
+    console.log('Fetching started (isFetching = true)');
+    res.json({ status: 'started', message: 'Lead fetching has been started successfully' });
+  } catch (error) {
+    console.error('Error starting fetching:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to start fetching', error: error.message });
   }
-  isFetching = true;
-  console.log('Fetching started (isFetching = true)');
-  res.json({ status: 'started' });
 });
 
 // API to stop fetching
 app.post('/api/stop-fetching', (req, res) => {
-  isFetching = false;
-  console.log('Fetching stopped (isFetching = false)');
-  res.json({ status: 'stopped' });
+  try {
+    isFetching = false;
+    console.log('Fetching stopped (isFetching = false)');
+    res.json({ status: 'stopped', message: 'Lead fetching has been stopped successfully' });
+  } catch (error) {
+    console.error('Error stopping fetching:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to stop fetching', error: error.message });
+  }
 });
 
 // API to globally disable fetching

@@ -120,14 +120,18 @@ const downloadDailyLeadsBtn = document.getElementById('downloadDailyLeadsBtn');
 async function updateFetchingStatus() {
     try {
         const res = await fetch(`${API_BASE_URL}/api/fetching-status`);
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+        }
         const data = await res.json();
         if (toggleFetchingBtn) {
             toggleFetchingBtn.textContent = data.isFetching ? 'Stop Fetching' : 'Start Fetching';
             toggleFetchingBtn.disabled = false;
         }
     } catch (error) {
+        console.error('Error updating fetching status:', error);
         if (toggleFetchingBtn) {
-            toggleFetchingBtn.textContent = 'Error';
+            toggleFetchingBtn.textContent = 'Connection Error';
             toggleFetchingBtn.disabled = false;
         }
     }
