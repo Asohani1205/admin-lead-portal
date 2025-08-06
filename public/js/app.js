@@ -106,6 +106,7 @@ socket.on('newLead', (lead) => {
 
 // Start/Stop Fetching Button Logic
 const toggleFetchingBtn = document.getElementById('toggleFetchingBtn');
+const downloadDailyLeadsBtn = document.getElementById('downloadDailyLeadsBtn');
 
 async function updateFetchingStatus() {
     try {
@@ -137,9 +138,100 @@ toggleFetchingBtn?.addEventListener('click', async () => {
     await updateFetchingStatus();
 });
 
+// Function to load recent leads from database
+async function loadRecentLeads() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/recent-leads?limit=50`);
+        const data = await response.json();
+        
+        if (data.leads && data.leads.length > 0) {
+            // Clear existing activity feed
+            activityFeed.innerHTML = '';
+            
+            // Add each lead to the activity feed
+            data.leads.forEach(lead => {
+                // Use emittedAt timestamp if available, otherwise use timestamp
+                const leadTimestamp = lead.emittedAt || lead.timestamp;
+                const leadWithTimestamp = { ...lead, timestamp: leadTimestamp };
+                createActivityItem(leadWithTimestamp);
+                todayLeads++;
+                totalLeadsProcessed++;
+            });
+            
+            console.log(`Loaded ${data.leads.length} recent leads from database`);
+        }
+    } catch (error) {
+        console.error('Error loading recent leads:', error);
+    }
+}
+
+// Function to check if download button should be visible
+function checkDownloadButtonVisibility() {
+    const now = new Date();
+    const currentHour = now.getHours();
+    
+    if (currentHour >= 19) { // After 7 PM
+        downloadDailyLeadsBtn.style.display = 'block';
+    } else {
+        downloadDailyLeadsBtn.style.display = 'none';
+    }
+}
+
+// Download Daily Leads Button Logic
+downloadDailyLeadsBtn?.addEventListener('click', async () => {
+    try {
+        downloadDailyLeadsBtn.disabled = true;
+        downloadDailyLeadsBtn.textContent = 'Downloading...';
+        
+        const response = await fetch(`${API_BASE_URL}/api/download-daily-leads`);
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to download leads');
+        }
+        
+        // Create blob and download
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        
+        // Get filename from response headers or use default
+        const contentDisposition = response.headers.get('content-disposition');
+        let filename = `Daily_Leads_${new Date().toISOString().split('T')[0]}.xlsx`;
+        if (contentDisposition) {
+            const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+            if (filenameMatch) {
+                filename = filenameMatch[1];
+            }
+        }
+        
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        console.log('Daily leads Excel file downloaded successfully');
+        
+    } catch (error) {
+        console.error('Error downloading daily leads:', error);
+        alert(`Error downloading leads: ${error.message}`);
+    } finally {
+        downloadDailyLeadsBtn.disabled = false;
+        downloadDailyLeadsBtn.textContent = 'Download Daily Leads';
+    }
+});
+
 document.addEventListener('DOMContentLoaded', () => {
     updateFetchingStatus();
     updateStatsDisplay();
+    loadRecentLeads(); // Load recent leads on page load
+    checkDownloadButtonVisibility(); // Check if download button should be visible
+    
+    // Check download button visibility every minute
+    setInterval(checkDownloadButtonVisibility, 60000);
 });
 
 // Initial stats update

@@ -58,6 +58,10 @@ const leadSchema = new mongoose.Schema({
     timestamp: {
         type: Date,
         default: Date.now
+    },
+    emittedAt: {
+        type: Date,
+        default: null
     }
 }, {
     timestamps: true,

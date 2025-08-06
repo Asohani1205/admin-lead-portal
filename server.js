@@ -16,6 +16,7 @@ const moment = require('moment');
 const connectDB = require('./config/database');
 const Lead = require('./models/Lead');
 const cors = require('cors');
+const ExcelJS = require('exceljs');
 require('dotenv').config();
 
 // Connect to MongoDB
@@ -48,6 +49,11 @@ let isFetchingGloballyDisabled = false;
 let serializedLeadIndex = 0;
 let totalLeadsInDB = 0;
 
+// Daily lead tracking
+let dailyLeadCount = 0;
+let lastResetDate = new Date().toDateString();
+const MAX_DAILY_LEADS = 21;
+
 let stats = {
   dailyLeadsCount: 0,
   yesterdayLeadsCount: 35,
@@ -61,8 +67,8 @@ let stats = {
   dataPointsCollected: 0
 };
 
-const WORK_START_HOUR = 6; // 6 AM
-const WORK_END_HOUR = 24; // 12 AM (midnight)
+const WORK_START_HOUR = 10; // 10 AM
+const WORK_END_HOUR = 19; // 7 PM
 
 // Add this at the top of the file, after the imports
 let sourceIndex = 0;
@@ -91,10 +97,11 @@ async function loadInitialLeads() {
 
 // Function to calculate random interval for lead emission
 function calculateLeadEmissionInterval() {
-  // Calculate total time in milliseconds for 24 hours
-  const totalTime = 24 * 60 * 60 * 1000; // 24 hours
-  const totalLeadsToEmit = 360; // Target 360 leads per day (15 per hour * 24 hours)
-  const averageInterval = totalTime / totalLeadsToEmit;
+  // Calculate working hours (10 AM to 7 PM = 9 hours)
+  const workingHours = WORK_END_HOUR - WORK_START_HOUR; // 9 hours
+  const totalWorkingTime = workingHours * 60 * 60 * 1000; // 9 hours in milliseconds
+  const totalLeadsToEmit = MAX_DAILY_LEADS; // 21 leads per day
+  const averageInterval = totalWorkingTime / totalLeadsToEmit;
 
   // Add some randomness (±30% of average interval)
   const randomFactor = 0.3;
@@ -104,9 +111,41 @@ function calculateLeadEmissionInterval() {
   return Math.floor(Math.random() * (maxInterval - minInterval + 1) + minInterval);
 }
 
+// Function to check if current time is within working hours
+function isWithinWorkingHours() {
+  const now = new Date();
+  const currentHour = now.getHours();
+  return currentHour >= WORK_START_HOUR && currentHour < WORK_END_HOUR;
+}
+
+// Function to reset daily lead count if it's a new day
+function resetDailyCountIfNewDay() {
+  const today = new Date().toDateString();
+  if (today !== lastResetDate) {
+    dailyLeadCount = 0;
+    lastResetDate = today;
+    console.log(`New day detected. Daily lead count reset to 0.`);
+  }
+}
+
 // Function to emit a new lead
 async function emitNewLead() {
   try {
+    // Reset daily count if it's a new day
+    resetDailyCountIfNewDay();
+    
+    // Check if we're within working hours
+    if (!isWithinWorkingHours()) {
+      console.log(`Outside working hours (${WORK_START_HOUR}:00 - ${WORK_END_HOUR}:00). No leads will be emitted.`);
+      return;
+    }
+    
+    // Check if we've reached the daily limit
+    if (dailyLeadCount >= MAX_DAILY_LEADS) {
+      console.log(`Daily lead limit reached (${MAX_DAILY_LEADS}). No more leads today.`);
+      return;
+    }
+    
     // Check if we have leads in memory
     if (leadsData.length > 0) {
       // Get the next lead in sequence
@@ -116,9 +155,18 @@ async function emitNewLead() {
       lead.source = sources[sourceIndex];
       sourceIndex = (sourceIndex + 1) % sources.length;
       
+      // Increment daily count
+      dailyLeadCount++;
+      
+      // Update the lead in database with emitted timestamp and source
+      await Lead.findByIdAndUpdate(lead._id, {
+        source: lead.source,
+        emittedAt: new Date()
+      });
+      
       // Emit the lead to all connected clients
       io.emit('newLead', lead);
-      console.log(`Emitted lead ${serializedLeadIndex + 1}/${totalLeadsInDB}:`, lead.name, 'from source:', lead.source);
+      console.log(`Emitted lead ${serializedLeadIndex + 1}/${totalLeadsInDB} (Daily: ${dailyLeadCount}/${MAX_DAILY_LEADS}):`, lead.name, 'from source:', lead.source);
       
       // Move to next lead in sequence
       serializedLeadIndex = (serializedLeadIndex + 1) % totalLeadsInDB;
@@ -196,6 +244,26 @@ app.get('/api/leads', async (req, res) => {
   } catch (error) {
     console.error('Error fetching leads:', error);
     res.status(500).json({ error: 'Failed to fetch leads' });
+  }
+});
+
+// API to get recent emitted leads for activity feed
+app.get('/api/recent-leads', async (req, res) => {
+  try {
+    const { limit = 50 } = req.query;
+    
+    // Get recent leads that were emitted (have emittedAt timestamp)
+    const recentLeads = await Lead.find({ emittedAt: { $exists: true } })
+      .sort({ emittedAt: -1 })
+      .limit(parseInt(limit));
+
+    res.json({
+      leads: recentLeads,
+      count: recentLeads.length
+    });
+  } catch (error) {
+    console.error('Error fetching recent leads:', error);
+    res.status(500).json({ error: 'Failed to fetch recent leads' });
   }
 });
 
@@ -292,6 +360,126 @@ app.post('/api/enable-fetching', (req, res) => {
   isFetchingGloballyDisabled = false;
   console.log('Fetching is now globally enabled by admin.');
   res.json({ status: 'globally_enabled' });
+});
+
+// API to download daily leads as Excel
+app.get('/api/download-daily-leads', async (req, res) => {
+  try {
+    const now = new Date();
+    const currentHour = now.getHours();
+    
+    // Check if it's after 7 PM (19:00) to allow download
+    if (currentHour < 19) {
+      return res.status(403).json({ 
+        error: 'Daily leads download is only available after 7 PM',
+        availableAt: '19:00 (7 PM)'
+      });
+    }
+    
+    // Get today's date range
+    const today = new Date();
+    const startOfDay = new Date(today.setHours(0, 0, 0, 0));
+    const endOfDay = new Date(today.setHours(23, 59, 59, 999));
+    
+    // Fetch today's emitted leads
+    const dailyLeads = await Lead.find({
+      emittedAt: {
+        $gte: startOfDay,
+        $lte: endOfDay
+      }
+    }).sort({ emittedAt: 1 });
+    
+    if (dailyLeads.length === 0) {
+      return res.status(404).json({ error: 'No leads found for today' });
+    }
+    
+    // Create Excel workbook
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Daily Leads');
+    
+    // Add header row
+    worksheet.columns = [
+      { header: 'S.No', key: 'sno', width: 10 },
+      { header: 'Name', key: 'name', width: 25 },
+      { header: 'Mobile', key: 'mobile', width: 15 },
+      { header: 'Address', key: 'address', width: 30 },
+      { header: 'City', key: 'city', width: 15 },
+      { header: 'Source', key: 'source', width: 15 },
+      { header: 'Status', key: 'status', width: 15 },
+      { header: 'Priority', key: 'priority', width: 15 },
+      { header: 'Price', key: 'price', width: 15 },
+      { header: 'Property Type', key: 'propertyType', width: 20 },
+      { header: 'Locality', key: 'locality', width: 20 },
+      { header: 'Emitted At', key: 'emittedAt', width: 20 }
+    ];
+    
+    // Style the header row
+    worksheet.getRow(1).font = { bold: true };
+    worksheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE6E6FA' }
+    };
+    
+    // Add data rows
+    dailyLeads.forEach((lead, index) => {
+      worksheet.addRow({
+        sno: index + 1,
+        name: lead.name,
+        mobile: lead.mobile,
+        address: lead.address,
+        city: lead.city,
+        source: lead.source,
+        status: lead.status,
+        priority: lead.priority,
+        price: lead.price,
+        propertyType: lead.propertyType,
+        locality: lead.locality,
+        emittedAt: moment(lead.emittedAt).format('YYYY-MM-DD HH:mm:ss')
+      });
+    });
+    
+    // Add summary row
+    worksheet.addRow({});
+    worksheet.addRow({
+      sno: '',
+      name: 'SUMMARY',
+      mobile: `Total Leads: ${dailyLeads.length}`,
+      address: `Date: ${moment().format('YYYY-MM-DD')}`,
+      city: `Generated at: ${moment().format('HH:mm:ss')}`,
+      source: '',
+      status: '',
+      priority: '',
+      price: '',
+      propertyType: '',
+      locality: '',
+      emittedAt: ''
+    });
+    
+    // Style the summary row
+    const summaryRow = worksheet.lastRow;
+    summaryRow.font = { bold: true };
+    summaryRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFFFD700' }
+    };
+    
+    // Set response headers for file download
+    const fileName = `Daily_Leads_${moment().format('YYYY-MM-DD')}.xlsx`;
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    
+    // Write to response
+    await workbook.xlsx.write(res);
+    res.end();
+    
+    console.log(`Daily leads Excel file downloaded: ${fileName} (${dailyLeads.length} leads)`);
+    
+  } catch (error) {
+    console.error('Error generating Excel file:', error);
+    res.status(500).json({ error: 'Failed to generate Excel file' });
+  }
 });
 
 // API to get fetching status
