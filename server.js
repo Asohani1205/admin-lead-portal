@@ -175,7 +175,13 @@ function calculateLeadEmissionInterval() {
 // Function to check if current time is within working hours
 function isWithinWorkingHours() {
   const now = new Date();
-  const currentHour = now.getHours();
+  // Get current hour in India timezone
+  const indiaTime = now.toLocaleString('en-US', { 
+    timeZone: 'Asia/Kolkata',
+    hour12: false 
+  });
+  const currentHour = parseInt(indiaTime.split(',')[1].trim().split(':')[0]);
+  console.log(`Current time (India): ${indiaTime}, Current hour: ${currentHour}, Working hours: ${WORK_START_HOUR}:00 - ${WORK_END_HOUR}:00`);
   return currentHour >= WORK_START_HOUR && currentHour < WORK_END_HOUR;
 }
 
@@ -608,6 +614,27 @@ app.get('/api/leads-data-status', (req, res) => {
 // API to get lead emission configuration
 app.get('/api/lead-emission-config', (req, res) => {
   res.json(LEAD_EMISSION_CONFIG);
+});
+
+// Debug endpoint to check current time and timezone
+app.get('/api/debug-time', (req, res) => {
+  const now = new Date();
+  const utcTime = now.toISOString();
+  const localTime = now.toString();
+  const indiaTime = now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+  const currentHour = now.getHours();
+  const isWorkingHours = isWithinWorkingHours();
+  
+  res.json({
+    utcTime,
+    localTime,
+    indiaTime,
+    currentHour,
+    workingHours: `${WORK_START_HOUR}:00 - ${WORK_END_HOUR}:00`,
+    isWorkingHours,
+    isFetching,
+    isFetchingGloballyDisabled
+  });
 });
 
 // API to update lead emission configuration
