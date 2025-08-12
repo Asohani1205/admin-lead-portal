@@ -188,13 +188,9 @@ async function loadRecentLeads() {
 
 // Function to check if download button should be visible
 function checkDownloadButtonVisibility() {
-    const now = new Date();
-    const currentHour = now.getHours();
-    
-    if (currentHour >= 19) { // After 7 PM
+    // Always show the download button - no time restrictions
+    if (downloadDailyLeadsBtn) {
         downloadDailyLeadsBtn.style.display = 'block';
-    } else {
-        downloadDailyLeadsBtn.style.display = 'none';
     }
 }
 

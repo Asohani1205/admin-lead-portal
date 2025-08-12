@@ -452,16 +452,6 @@ app.post('/api/enable-fetching', (req, res) => {
 // API to download daily leads as Excel
 app.get('/api/download-daily-leads', async (req, res) => {
   try {
-    const now = new Date();
-    const currentHour = now.getHours();
-    
-    // Check if it's after 7 PM (19:00) to allow download
-    if (currentHour < 19) {
-      return res.status(403).json({ 
-        error: 'Daily leads download is only available after 7 PM',
-        availableAt: '19:00 (7 PM)'
-      });
-    }
     
     // Get today's date range
     const today = new Date();
