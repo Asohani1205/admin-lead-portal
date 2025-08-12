@@ -85,7 +85,7 @@ let totalLeadsInDB = 0;
 // Daily lead tracking
 let dailyLeadCount = 0;
 let lastResetDate = new Date().toDateString();
-const MAX_DAILY_LEADS = 21;
+const MAX_DAILY_LEADS = 29;
 
 // Lead emission configuration
 const LEAD_EMISSION_CONFIG = {
@@ -111,8 +111,8 @@ let stats = {
   dataPointsCollected: 0
 };
 
-const WORK_START_HOUR = 10; // 10 AM
-const WORK_END_HOUR = 19; // 7 PM
+const WORK_START_HOUR = 11; // 11 AM
+const WORK_END_HOUR = 23; // 11 PM
 
 // Add this at the top of the file, after the imports
 let sourceIndex = 0;
@@ -141,10 +141,10 @@ async function loadInitialLeads() {
 
 // Function to calculate random interval for lead emission
 function calculateLeadEmissionInterval() {
-  // Calculate working hours (10 AM to 7 PM = 9 hours)
-  const workingHours = WORK_END_HOUR - WORK_START_HOUR; // 9 hours
-  const totalWorkingTime = workingHours * 60 * 60 * 1000; // 9 hours in milliseconds
-  const totalLeadsToEmit = MAX_DAILY_LEADS; // 21 leads per day
+  // Calculate working hours (11 AM to 11 PM = 12 hours)
+  const workingHours = WORK_END_HOUR - WORK_START_HOUR; // 12 hours
+  const totalWorkingTime = workingHours * 60 * 60 * 1000; // 12 hours in milliseconds
+  const totalLeadsToEmit = MAX_DAILY_LEADS; // 29 leads per day
   const averageInterval = totalWorkingTime / totalLeadsToEmit;
 
   // Add more randomness (±50% of average interval for more variation)
