@@ -89,10 +89,10 @@ const MAX_DAILY_LEADS = 29;
 
 // Lead emission configuration
 const LEAD_EMISSION_CONFIG = {
-  minIntervalSeconds: 5,        // Minimum time between leads (seconds)
-  maxIntervalSeconds: 300,      // Maximum time between leads (seconds)
-  burstModeChance: 0.1,        // 10% chance of burst mode (faster emission)
-  slowModeChance: 0.1,         // 10% chance of slow mode (slower emission)
+  minIntervalSeconds: 120,      // Minimum time between leads (2 minutes)
+  maxIntervalSeconds: 900,      // Maximum time between leads (15 minutes)
+  burstModeChance: 0.05,       // 5% chance of burst mode (faster emission)
+  slowModeChance: 0.15,        // 15% chance of slow mode (slower emission)
   workingHoursOnly: true,       // Only emit during working hours
   randomizeSources: true,       // Randomly assign sources
   avoidDuplicates: false        // Whether to avoid emitting the same lead twice
@@ -157,11 +157,11 @@ function calculateLeadEmissionInterval() {
   let finalInterval;
   
   if (extraRandomness < LEAD_EMISSION_CONFIG.burstModeChance) {
-    // Burst mode: very fast emission
-    finalInterval = Math.random() * (LEAD_EMISSION_CONFIG.minIntervalSeconds * 1000 * 2);
+    // Burst mode: moderately fast emission (but not too fast)
+    finalInterval = Math.random() * (LEAD_EMISSION_CONFIG.minIntervalSeconds * 1000 * 1.5);
   } else if (extraRandomness < (LEAD_EMISSION_CONFIG.burstModeChance + LEAD_EMISSION_CONFIG.slowModeChance)) {
     // Slow mode: slower emission
-    finalInterval = averageInterval * (1.5 + Math.random() * 1);
+    finalInterval = averageInterval * (2 + Math.random() * 1.5);
   } else {
     // Normal mode: random interval within configured bounds
     const minMs = LEAD_EMISSION_CONFIG.minIntervalSeconds * 1000;
