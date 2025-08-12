@@ -39,7 +39,7 @@ function createActivityItem(lead) {
     const sourceColor = sourceBadgeColors[lead.source.toLowerCase()] || 'bg-gray-600';
 
     // Only show content if it exists
-    const name = lead.name && lead.name.trim() ? lead.name.trim() : 'Unknown Lead';
+    const name = lead.name ? lead.name : 'Unknown Lead';
     const mobile = lead.mobile ? lead.mobile : '';
     const address = lead.address ? lead.address : '';
 
