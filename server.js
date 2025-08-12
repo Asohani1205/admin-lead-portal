@@ -484,9 +484,6 @@ app.get('/api/download-daily-leads', async (req, res) => {
       { header: 'Source', key: 'source', width: 15 },
       { header: 'Status', key: 'status', width: 15 },
       { header: 'Priority', key: 'priority', width: 15 },
-      { header: 'Price', key: 'price', width: 15 },
-      { header: 'Property Type', key: 'propertyType', width: 20 },
-      { header: 'Locality', key: 'locality', width: 20 },
       { header: 'Emitted At', key: 'emittedAt', width: 20 }
     ];
     
@@ -509,9 +506,6 @@ app.get('/api/download-daily-leads', async (req, res) => {
         source: lead.source,
         status: lead.status,
         priority: lead.priority,
-        price: lead.price,
-        propertyType: lead.propertyType,
-        locality: lead.locality,
         emittedAt: moment(lead.emittedAt).format('YYYY-MM-DD HH:mm:ss')
       });
     });
@@ -527,9 +521,6 @@ app.get('/api/download-daily-leads', async (req, res) => {
       source: '',
       status: '',
       priority: '',
-      price: '',
-      propertyType: '',
-      locality: '',
       emittedAt: ''
     });
     
