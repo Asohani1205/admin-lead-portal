@@ -85,14 +85,14 @@ let totalLeadsInDB = 0;
 // Daily lead tracking
 let dailyLeadCount = 0;
 let lastResetDate = new Date().toDateString();
-const MAX_DAILY_LEADS = 29;
+const MAX_DAILY_LEADS = 100; // Increased for faster testing
 
 // Lead emission configuration
 const LEAD_EMISSION_CONFIG = {
-  minIntervalSeconds: 300,      // Minimum time between leads (5 minutes)
-  maxIntervalSeconds: 1200,     // Maximum time between leads (20 minutes)
-  slowModeOnly: true,          // Only use slow mode (no burst or normal modes)
-  workingHoursOnly: true,       // Only emit during working hours
+  minIntervalSeconds: 10,       // Minimum time between leads (10 seconds) - MUCH FASTER
+  maxIntervalSeconds: 30,       // Maximum time between leads (30 seconds) - MUCH FASTER
+  slowModeOnly: false,          // Disable slow mode for faster emission
+  workingHoursOnly: false,      // Disable working hours restriction for testing
   randomizeSources: true,       // Randomly assign sources
   avoidDuplicates: false        // Whether to avoid emitting the same lead twice
 };
@@ -197,31 +197,13 @@ async function loadInitialLeads() {
 
 // Function to calculate random interval for lead emission
 function calculateLeadEmissionInterval() {
-  // Calculate working hours (11 AM to 11 PM = 12 hours)
-  const workingHours = WORK_END_HOUR - WORK_START_HOUR; // 12 hours
-  const totalWorkingTime = workingHours * 60 * 60 * 1000; // 12 hours in milliseconds
-  const totalLeadsToEmit = MAX_DAILY_LEADS; // 29 leads per day
-  const averageInterval = totalWorkingTime / totalLeadsToEmit;
-
-  // Add more randomness (±50% of average interval for more variation)
-  const randomFactor = 0.5;
-  const minInterval = averageInterval * (1 - randomFactor);
-  const maxInterval = averageInterval * (1 + randomFactor);
-
-    // Use only slow mode for consistent, slower emission
-  let finalInterval;
+  // For faster testing, use simple random interval between min and max
+  const minMs = LEAD_EMISSION_CONFIG.minIntervalSeconds * 1000;
+  const maxMs = LEAD_EMISSION_CONFIG.maxIntervalSeconds * 1000;
+  const finalInterval = Math.floor(Math.random() * (maxMs - minMs + 1) + minMs);
   
-  if (LEAD_EMISSION_CONFIG.slowModeOnly) {
-    // Slow mode: consistent slower emission
-    finalInterval = averageInterval * (2.5 + Math.random() * 2); // 2.5x to 4.5x average interval
-  } else {
-    // Fallback: random interval within configured bounds
-    const minMs = LEAD_EMISSION_CONFIG.minIntervalSeconds * 1000;
-    const maxMs = LEAD_EMISSION_CONFIG.maxIntervalSeconds * 1000;
-    finalInterval = Math.floor(Math.random() * (maxMs - minMs + 1) + minMs);
-  }
-
-  return Math.max(LEAD_EMISSION_CONFIG.minIntervalSeconds * 1000, Math.floor(finalInterval));
+  console.log(`Next lead will be emitted in ${Math.round(finalInterval / 1000)} seconds`);
+  return finalInterval;
 }
 
 // Function to check if current time is within working hours
