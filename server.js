@@ -89,8 +89,8 @@ const MAX_DAILY_LEADS = 29; // Back to normal daily limit
 
 // Lead emission configuration
 const LEAD_EMISSION_CONFIG = {
-  minIntervalSeconds: 120,      // Minimum time between leads (2 minutes)
-  maxIntervalSeconds: 300,      // Maximum time between leads (5 minutes)
+  minIntervalSeconds: 1200,     // Minimum time between leads (20 minutes)
+  maxIntervalSeconds: 1800,     // Maximum time between leads (30 minutes)
   slowModeOnly: false,          // Disable slow mode for faster emission
   workingHoursOnly: false,      // Disable working hours restriction for testing
   randomizeSources: true,       // Randomly assign sources
