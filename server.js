@@ -85,12 +85,12 @@ let totalLeadsInDB = 0;
 // Daily lead tracking
 let dailyLeadCount = 0;
 let lastResetDate = new Date().toDateString();
-const MAX_DAILY_LEADS = 100; // Increased for faster testing
+const MAX_DAILY_LEADS = 29; // Back to normal daily limit
 
 // Lead emission configuration
 const LEAD_EMISSION_CONFIG = {
-  minIntervalSeconds: 10,       // Minimum time between leads (10 seconds) - MUCH FASTER
-  maxIntervalSeconds: 30,       // Maximum time between leads (30 seconds) - MUCH FASTER
+  minIntervalSeconds: 120,      // Minimum time between leads (2 minutes)
+  maxIntervalSeconds: 300,      // Maximum time between leads (5 minutes)
   slowModeOnly: false,          // Disable slow mode for faster emission
   workingHoursOnly: false,      // Disable working hours restriction for testing
   randomizeSources: true,       // Randomly assign sources
