@@ -162,12 +162,19 @@ toggleFetchingBtn?.addEventListener('click', async () => {
 // Function to load recent leads from database
 async function loadRecentLeads() {
     try {
+        console.log('Loading recent leads from database...');
         const response = await fetch(`${API_BASE_URL}/api/recent-leads?limit=50`);
         const data = await response.json();
+        
+        console.log('Recent leads response:', data);
         
         if (data.leads && data.leads.length > 0) {
             // Clear existing activity feed
             activityFeed.innerHTML = '';
+            
+            // Reset counters
+            todayLeads = 0;
+            totalLeadsProcessed = 0;
             
             // Add each lead to the activity feed
             data.leads.forEach(lead => {
@@ -179,7 +186,12 @@ async function loadRecentLeads() {
                 totalLeadsProcessed++;
             });
             
+            // Update stats display after loading
+            updateStatsDisplay();
+            
             console.log(`Loaded ${data.leads.length} recent leads from database`);
+        } else {
+            console.log('No recent leads found in database');
         }
     } catch (error) {
         console.error('Error loading recent leads:', error);

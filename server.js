@@ -130,6 +130,63 @@ async function loadInitialLeads() {
     leadsData = await Lead.find({}).sort({ timestamp: -1 });
     totalLeadsInDB = leadsData.length;
     serializedLeadIndex = 0;
+    
+    // If no leads exist, create some sample leads
+    if (leadsData.length === 0) {
+      console.log('No leads found in database. Creating sample leads...');
+      const sampleLeads = [
+        {
+          name: 'Rahul Sharma',
+          mobile: '9876543210',
+          address: '123 MG Road, Indore',
+          city: 'Indore',
+          source: 'Facebook',
+          status: 'New',
+          priority: 'High',
+          price: 2500000,
+          propertyType: 'Apartment',
+          locality: 'Vijay Nagar',
+          timestamp: new Date()
+        },
+        {
+          name: 'Priya Patel',
+          mobile: '8765432109',
+          address: '456 AB Road, Indore',
+          city: 'Indore',
+          source: 'Instagram',
+          status: 'New',
+          priority: 'Medium',
+          price: 1800000,
+          propertyType: 'Villa',
+          locality: 'Palasia',
+          timestamp: new Date()
+        },
+        {
+          name: 'Amit Kumar',
+          mobile: '7654321098',
+          address: '789 Rajendra Nagar, Indore',
+          city: 'Indore',
+          source: 'Website',
+          status: 'New',
+          priority: 'Low',
+          price: 1200000,
+          propertyType: 'Plot',
+          locality: 'Rajendra Nagar',
+          timestamp: new Date()
+        }
+      ];
+      
+      for (const leadData of sampleLeads) {
+        const newLead = new Lead(leadData);
+        await newLead.save();
+      }
+      
+      // Reload leads after creating samples
+      leadsData = await Lead.find({}).sort({ timestamp: -1 });
+      totalLeadsInDB = leadsData.length;
+      console.log(`Created ${sampleLeads.length} sample leads. Total leads now: ${totalLeadsInDB}`);
+    }
+    
     console.log(`System ready with ${leadsData.length} potential leads for serialized emission`);
     return true;
   } catch (error) {
@@ -328,9 +385,17 @@ app.get('/api/recent-leads', async (req, res) => {
     const { limit = 50 } = req.query;
     
     // Get recent leads that were emitted (have emittedAt timestamp)
-    const recentLeads = await Lead.find({ emittedAt: { $exists: true } })
-      .sort({ emittedAt: -1 })
+    // Also include leads with timestamp if emittedAt doesn't exist (fallback)
+    const recentLeads = await Lead.find({
+      $or: [
+        { emittedAt: { $exists: true } },
+        { timestamp: { $exists: true } }
+      ]
+    })
+      .sort({ emittedAt: -1, timestamp: -1 })
       .limit(parseInt(limit));
+
+    console.log(`Fetched ${recentLeads.length} recent leads from database`);
 
     res.json({
       leads: recentLeads,
@@ -578,13 +643,26 @@ app.post('/api/emit-test-lead', async (req, res) => {
 });
 
 // API to check leads data in memory
-app.get('/api/leads-data-status', (req, res) => {
-  res.json({ 
-    leadsDataLength: leadsData.length,
-    totalLeadsInDB,
-    isFetching,
-    isFetchingGloballyDisabled
-  });
+app.get('/api/leads-data-status', async (req, res) => {
+  try {
+    // Get database statistics
+    const totalLeadsInDatabase = await Lead.countDocuments({});
+    const emittedLeadsCount = await Lead.countDocuments({ emittedAt: { $exists: true } });
+    const leadsWithTimestamp = await Lead.countDocuments({ timestamp: { $exists: true } });
+    
+    res.json({ 
+      leadsDataLength: leadsData.length,
+      totalLeadsInDB,
+      totalLeadsInDatabase,
+      emittedLeadsCount,
+      leadsWithTimestamp,
+      isFetching,
+      isFetchingGloballyDisabled
+    });
+  } catch (error) {
+    console.error('Error getting leads data status:', error);
+    res.status(500).json({ error: 'Failed to get leads data status' });
+  }
 });
 
 // API to get lead emission configuration
