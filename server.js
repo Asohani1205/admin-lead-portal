@@ -89,8 +89,9 @@ const MAX_DAILY_LEADS = 100; // Increased for faster testing
 
 // Lead emission configuration
 const LEAD_EMISSION_CONFIG = {
-  minIntervalSeconds: 15,       // Minimum time between leads (15 seconds) - FAST FOR TESTING
-  maxIntervalSeconds: 45,       // Maximum time between leads (45 seconds) - FAST FOR TESTING
+  targetEndTime: 23,            // Target end time (11 PM)
+  minIntervalSeconds: 10,       // Minimum time between leads (10 seconds)
+  maxIntervalSeconds: 300,      // Maximum time between leads (5 minutes)
   slowModeOnly: false,          // Disable slow mode for faster emission
   workingHoursOnly: false,      // Disable working hours restriction for testing
   randomizeSources: true,       // Randomly assign sources
@@ -197,12 +198,47 @@ async function loadInitialLeads() {
 
 // Function to calculate random interval for lead emission
 function calculateLeadEmissionInterval() {
-  // For faster testing, use simple random interval between min and max
-  const minMs = LEAD_EMISSION_CONFIG.minIntervalSeconds * 1000;
-  const maxMs = LEAD_EMISSION_CONFIG.maxIntervalSeconds * 1000;
-  const finalInterval = Math.floor(Math.random() * (maxMs - minMs + 1) + minMs);
+  const now = new Date();
+  const currentHour = now.getHours();
+  const currentMinute = now.getMinutes();
   
-  console.log(`Next lead will be emitted in ${Math.round(finalInterval / 1000)} seconds`);
+  // Calculate time until 11 PM (23:00)
+  const targetHour = 23; // 11 PM
+  const targetMinute = 0;
+  
+  let minutesUntilTarget;
+  if (currentHour < targetHour) {
+    minutesUntilTarget = (targetHour - currentHour) * 60 - currentMinute;
+  } else {
+    // If it's past 11 PM, use a default interval
+    minutesUntilTarget = 60; // 1 hour default
+  }
+  
+  // Calculate remaining leads to emit
+  const remainingLeads = leadsData.length - dailyLeadCount;
+  const maxLeadsToEmit = Math.min(remainingLeads, MAX_DAILY_LEADS - dailyLeadCount);
+  
+  if (maxLeadsToEmit <= 0) {
+    console.log('No more leads to emit today');
+    return 3600000; // 1 hour default
+  }
+  
+  // Calculate optimal interval to finish by 11 PM
+  const totalSecondsUntilTarget = minutesUntilTarget * 60;
+  const optimalIntervalSeconds = Math.floor(totalSecondsUntilTarget / maxLeadsToEmit);
+  
+  // Add randomization (±30% of optimal interval)
+  const randomFactor = 0.3;
+  const minInterval = Math.max(10, optimalIntervalSeconds * (1 - randomFactor)); // Minimum 10 seconds
+  const maxInterval = Math.min(300, optimalIntervalSeconds * (1 + randomFactor)); // Maximum 5 minutes
+  
+  const finalInterval = Math.floor(Math.random() * (maxInterval - minInterval + 1) + minInterval) * 1000;
+  
+  console.log(`Time until 11 PM: ${minutesUntilTarget} minutes`);
+  console.log(`Remaining leads to emit: ${maxLeadsToEmit}`);
+  console.log(`Optimal interval: ${optimalIntervalSeconds} seconds`);
+  console.log(`Randomized interval: ${Math.round(finalInterval / 1000)} seconds (${Math.round(finalInterval / 1000 / 60)} minutes)`);
+  
   return finalInterval;
 }
 
@@ -249,9 +285,21 @@ async function emitNewLead() {
     
           // Check if we have leads in memory
       if (leadsData.length > 0) {
-        // Randomly select a lead instead of sequential
-        const randomIndex = Math.floor(Math.random() * leadsData.length);
-        const lead = leadsData[randomIndex]; // Get the original lead object
+        // Filter out leads that have already been emitted today
+        const availableLeads = leadsData.filter(lead => !lead.emittedAt || 
+          new Date(lead.emittedAt).toDateString() !== new Date().toDateString());
+        
+        if (availableLeads.length === 0) {
+          console.log('All leads have been emitted today. Resetting for tomorrow...');
+          // Reset emittedAt for all leads to allow re-emission tomorrow
+          await Lead.updateMany({}, { $unset: { emittedAt: 1 } });
+          leadsData = await Lead.find({}).sort({ timestamp: -1 });
+          return;
+        }
+        
+        // Randomly select a lead from available leads
+        const randomIndex = Math.floor(Math.random() * availableLeads.length);
+        const lead = availableLeads[randomIndex]; // Get the original lead object
         
         // Create a copy for emission
         const leadForEmission = { ...lead };
@@ -273,17 +321,17 @@ async function emitNewLead() {
         });
         console.log('Database update result:', updateResult);
       
-              // Emit the lead to all connected clients
+        // Emit the lead to all connected clients
         console.log('Emitting lead to clients:', leadForEmission);
         io.emit('newLead', leadForEmission);
-        console.log(`Emitted lead ${randomIndex + 1}/${totalLeadsInDB} (Daily: ${dailyLeadCount}/${MAX_DAILY_LEADS}):`, lead.name, 'from source:', leadForEmission.source);
+        console.log(`Emitted lead ${dailyLeadCount}/${MAX_DAILY_LEADS} (Available: ${availableLeads.length}):`, lead.name, 'from source:', leadForEmission.source);
       
-      // Remove the emitted lead from the pool to avoid duplicates (if configured)
-      if (LEAD_EMISSION_CONFIG.avoidDuplicates) {
-        leadsData.splice(randomIndex, 1);
-        totalLeadsInDB = leadsData.length;
-        console.log(`Remaining leads in pool: ${totalLeadsInDB}`);
-      }
+        // Update the lead in memory with emittedAt
+        const leadIndex = leadsData.findIndex(l => l._id.toString() === lead._id.toString());
+        if (leadIndex !== -1) {
+          leadsData[leadIndex].emittedAt = new Date();
+          leadsData[leadIndex].source = leadForEmission.source;
+        }
     } else {
       console.log('No leads found in database');
     }
