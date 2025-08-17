@@ -98,19 +98,34 @@ function updateStatsDisplay() {
 
 // Socket event handlers
 if (typeof socket === 'undefined') {
-  window.socket = io(API_BASE_URL);
+  console.log('Initializing Socket.IO connection to:', API_BASE_URL);
+  window.socket = io(API_BASE_URL, {
+    transports: ['websocket', 'polling'],
+    timeout: 20000,
+    forceNew: true
+  });
 }
 
 socket.on('connect', () => {
-    console.log('Connected to server');
+    console.log('✅ Socket.IO connected successfully to server');
+    console.log('Socket ID:', socket.id);
+});
+
+socket.on('connect_error', (error) => {
+    console.error('❌ Socket.IO connection error:', error);
+});
+
+socket.on('disconnect', (reason) => {
+    console.log('🔌 Socket.IO disconnected:', reason);
 });
 
 socket.on('newLead', (lead) => {
-    console.log('Received new lead:', lead);
+    console.log('🎯 Received new lead via Socket.IO:', lead);
     createActivityItem(lead);
     todayLeads++;
     totalLeadsProcessed++;
     updateStatsDisplay();
+    console.log('✅ Lead added to activity feed. Total leads today:', todayLeads);
 });
 
 // Start/Stop Fetching Button Logic
