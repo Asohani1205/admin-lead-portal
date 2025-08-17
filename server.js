@@ -89,7 +89,6 @@ const MAX_DAILY_LEADS = 100; // Increased for faster testing
 
 // Lead emission configuration
 const LEAD_EMISSION_CONFIG = {
-  targetEndTime: 23,            // Target end time (11 PM)
   minIntervalSeconds: 5,        // Minimum time between leads (5 seconds) - VERY FAST FOR TESTING
   maxIntervalSeconds: 15,       // Maximum time between leads (15 seconds) - VERY FAST FOR TESTING
   slowModeOnly: false,          // Disable slow mode for faster emission
@@ -198,22 +197,6 @@ async function loadInitialLeads() {
 
 // Function to calculate random interval for lead emission
 function calculateLeadEmissionInterval() {
-  const now = new Date();
-  const currentHour = now.getHours();
-  const currentMinute = now.getMinutes();
-  
-  // Calculate time until 11 PM (23:00)
-  const targetHour = 23; // 11 PM
-  const targetMinute = 0;
-  
-  let minutesUntilTarget;
-  if (currentHour < targetHour) {
-    minutesUntilTarget = (targetHour - currentHour) * 60 - currentMinute;
-  } else {
-    // If it's past 11 PM, use a default interval
-    minutesUntilTarget = 60; // 1 hour default
-  }
-  
   // Calculate remaining leads to emit
   const remainingLeads = leadsData.length - dailyLeadCount;
   const maxLeadsToEmit = Math.min(remainingLeads, MAX_DAILY_LEADS - dailyLeadCount);
@@ -223,9 +206,9 @@ function calculateLeadEmissionInterval() {
     return 3600000; // 1 hour default
   }
   
-  // Calculate optimal interval to finish by 11 PM
-  const totalSecondsUntilTarget = minutesUntilTarget * 60;
-  const optimalIntervalSeconds = Math.floor(totalSecondsUntilTarget / maxLeadsToEmit);
+  // Calculate optimal interval to spread leads over 24 hours (86400 seconds)
+  const totalSecondsInDay = 86400; // 24 hours
+  const optimalIntervalSeconds = Math.floor(totalSecondsInDay / maxLeadsToEmit);
   
   // Add randomization (±30% of optimal interval)
   const randomFactor = 0.3;
@@ -234,9 +217,8 @@ function calculateLeadEmissionInterval() {
   
   const finalInterval = Math.floor(Math.random() * (maxInterval - minInterval + 1) + minInterval) * 1000;
   
-  console.log(`Time until 11 PM: ${minutesUntilTarget} minutes`);
   console.log(`Remaining leads to emit: ${maxLeadsToEmit}`);
-  console.log(`Optimal interval: ${optimalIntervalSeconds} seconds`);
+  console.log(`Optimal interval for 24-hour spread: ${optimalIntervalSeconds} seconds`);
   console.log(`Randomized interval: ${Math.round(finalInterval / 1000)} seconds (${Math.round(finalInterval / 1000 / 60)} minutes)`);
   
   return finalInterval;
