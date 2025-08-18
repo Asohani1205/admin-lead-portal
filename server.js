@@ -89,8 +89,8 @@ const MAX_DAILY_LEADS = 100; // Increased for faster testing
 
 // Lead emission configuration
 const LEAD_EMISSION_CONFIG = {
-  minIntervalSeconds: 15,       // Minimum time between leads (15 seconds)
-  maxIntervalSeconds: 60,       // Maximum time between leads (1 minute)
+  minIntervalSeconds: 300,      // Minimum time between leads (5 minutes)
+  maxIntervalSeconds: 600,      // Maximum time between leads (10 minutes)
   slowModeOnly: false,          // Disable slow mode for faster emission
   workingHoursOnly: false,      // Disable working hours restriction for testing
   randomizeSources: true,       // Randomly assign sources
@@ -210,9 +210,9 @@ function calculateLeadEmissionInterval() {
   const totalSecondsInDay = 86400; // 24 hours
   const optimalIntervalSeconds = Math.floor(totalSecondsInDay / maxLeadsToEmit);
   
-  // Use fixed intervals between 15 seconds to 1 minute for faster testing
-  const minInterval = 15; // Minimum 15 seconds
-  const maxInterval = 60; // Maximum 1 minute (60 seconds)
+  // Use fixed intervals between 5-10 minutes for realistic testing
+  const minInterval = 300; // Minimum 5 minutes (300 seconds)
+  const maxInterval = 600; // Maximum 10 minutes (600 seconds)
   
   const finalInterval = Math.floor(Math.random() * (maxInterval - minInterval + 1) + minInterval) * 1000;
   
