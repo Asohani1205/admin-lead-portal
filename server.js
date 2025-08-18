@@ -723,6 +723,35 @@ app.post('/api/lead-emission-config', (req, res) => {
   }
 });
 
+// API to reload leads from database
+app.post('/api/reload-leads', async (req, res) => {
+  try {
+    console.log('Reloading leads from database...');
+    
+    // Reset daily count to allow re-emission of leads
+    dailyLeadCount = 0;
+    
+    // Reload leads from database
+    leadsData = await Lead.find({}).sort({ timestamp: -1 });
+    totalLeadsInDB = leadsData.length;
+    
+    // Reset emittedAt for all leads to allow re-emission
+    await Lead.updateMany({}, { $unset: { emittedAt: 1 } });
+    
+    console.log(`Successfully reloaded ${leadsData.length} leads from database`);
+    
+    res.json({ 
+      status: 'success', 
+      message: `Reloaded ${leadsData.length} leads from database`,
+      totalLeads: leadsData.length,
+      dailyLeadCount: 0
+    });
+  } catch (error) {
+    console.error('Error reloading leads:', error);
+    res.status(500).json({ error: 'Failed to reload leads' });
+  }
+});
+
 // Start server
 const PORT = process.env.PORT || 3000;
 const server = http.listen(PORT, async () => {
