@@ -534,15 +534,29 @@ app.get('/api/download-daily-leads', async (req, res) => {
     const startOfDay = new Date(today.setHours(0, 0, 0, 0));
     const endOfDay = new Date(today.setHours(23, 59, 59, 999));
     
-    // Fetch today's emitted leads
+    // Fetch today's leads - either emitted today OR created today
     const dailyLeads = await Lead.find({
-      emittedAt: {
-        $gte: startOfDay,
-        $lte: endOfDay
-      }
-    }).sort({ emittedAt: 1 });
+      $or: [
+        {
+          emittedAt: {
+            $gte: startOfDay,
+            $lte: endOfDay
+          }
+        },
+        {
+          timestamp: {
+            $gte: startOfDay,
+            $lte: endOfDay
+          }
+        }
+      ]
+    }).sort({ emittedAt: 1, timestamp: 1 });
+    
+    console.log(`Download request: Found ${dailyLeads.length} leads for today`);
+    console.log(`Date range: ${startOfDay.toISOString()} to ${endOfDay.toISOString()}`);
     
     if (dailyLeads.length === 0) {
+      console.log('No leads found for today - returning 404');
       return res.status(404).json({ error: 'No leads found for today' });
     }
     
@@ -560,7 +574,7 @@ app.get('/api/download-daily-leads', async (req, res) => {
       { header: 'Source', key: 'source', width: 15 },
       { header: 'Status', key: 'status', width: 15 },
       { header: 'Priority', key: 'priority', width: 15 },
-      { header: 'Emitted At', key: 'emittedAt', width: 20 }
+      { header: 'Date/Time', key: 'emittedAt', width: 20 }
     ];
     
     // Style the header row
@@ -573,6 +587,8 @@ app.get('/api/download-daily-leads', async (req, res) => {
     
     // Add data rows
     dailyLeads.forEach((lead, index) => {
+      // Use emittedAt if available, otherwise use timestamp
+      const leadDate = lead.emittedAt || lead.timestamp;
       worksheet.addRow({
         sno: index + 1,
         name: lead.name,
@@ -582,7 +598,7 @@ app.get('/api/download-daily-leads', async (req, res) => {
         source: lead.source,
         status: lead.status,
         priority: lead.priority,
-        emittedAt: moment(lead.emittedAt).format('YYYY-MM-DD HH:mm:ss')
+        emittedAt: moment(leadDate).format('YYYY-MM-DD HH:mm:ss')
       });
     });
     
@@ -650,6 +666,44 @@ app.post('/api/emit-test-lead', async (req, res) => {
   } catch (error) {
     console.error('Error emitting test lead:', error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// API to create test leads for today (for testing download functionality)
+app.post('/api/create-test-leads', async (req, res) => {
+  try {
+    const { count = 5 } = req.query;
+    const testLeads = [];
+    
+    for (let i = 0; i < parseInt(count); i++) {
+      const testLead = new Lead({
+        name: `Test Lead ${i + 1}`,
+        mobile: `98765432${i.toString().padStart(2, '0')}`,
+        address: `Test Address ${i + 1}, Indore`,
+        city: 'Indore',
+        source: ['Facebook', 'Instagram', 'LinkedIn', 'Website', 'Google'][i % 5],
+        status: 'New',
+        priority: ['High', 'Medium', 'Low'][i % 3],
+        price: 1000000 + (i * 500000),
+        propertyType: ['Apartment', 'Villa', 'Plot', 'Independent House', 'Commercial'][i % 5],
+        locality: 'Vijay Nagar',
+        timestamp: new Date(), // This will be today's date
+        emittedAt: new Date()  // This will also be today's date
+      });
+      
+      await testLead.save();
+      testLeads.push(testLead);
+    }
+    
+    console.log(`Created ${testLeads.length} test leads for today`);
+    res.json({ 
+      status: 'success', 
+      message: `Created ${testLeads.length} test leads for today`,
+      leads: testLeads 
+    });
+  } catch (error) {
+    console.error('Error creating test leads:', error);
+    res.status(500).json({ error: 'Failed to create test leads' });
   }
 });
 
