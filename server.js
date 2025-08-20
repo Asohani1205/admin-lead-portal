@@ -669,43 +669,7 @@ app.post('/api/emit-test-lead', async (req, res) => {
   }
 });
 
-// API to create test leads for today (for testing download functionality)
-app.post('/api/create-test-leads', async (req, res) => {
-  try {
-    const { count = 5 } = req.query;
-    const testLeads = [];
-    
-    for (let i = 0; i < parseInt(count); i++) {
-      const testLead = new Lead({
-        name: `Test Lead ${i + 1}`,
-        mobile: `98765432${i.toString().padStart(2, '0')}`,
-        address: `Test Address ${i + 1}, Indore`,
-        city: 'Indore',
-        source: ['Facebook', 'Instagram', 'LinkedIn', 'Website', 'Google'][i % 5],
-        status: 'New',
-        priority: ['High', 'Medium', 'Low'][i % 3],
-        price: 1000000 + (i * 500000),
-        propertyType: ['Apartment', 'Villa', 'Plot', 'Independent House', 'Commercial'][i % 5],
-        locality: 'Vijay Nagar',
-        timestamp: new Date(), // This will be today's date
-        emittedAt: new Date()  // This will also be today's date
-      });
-      
-      await testLead.save();
-      testLeads.push(testLead);
-    }
-    
-    console.log(`Created ${testLeads.length} test leads for today`);
-    res.json({ 
-      status: 'success', 
-      message: `Created ${testLeads.length} test leads for today`,
-      leads: testLeads 
-    });
-  } catch (error) {
-    console.error('Error creating test leads:', error);
-    res.status(500).json({ error: 'Failed to create test leads' });
-  }
-});
+
 
 // API to check leads data in memory
 app.get('/api/leads-data-status', async (req, res) => {
