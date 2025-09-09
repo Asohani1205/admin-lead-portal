@@ -188,6 +188,11 @@ async function loadInitialLeads() {
     }
     
     console.log(`System ready with ${leadsData.length} potential leads for serialized emission`);
+    console.log('First lead sample:', leadsData[0] ? {
+      name: leadsData[0].name,
+      mobile: leadsData[0].mobile,
+      address: leadsData[0].address
+    } : 'No leads');
     return true;
   } catch (error) {
     console.error('Error initializing system:', error.message);
@@ -265,10 +270,20 @@ async function emitNewLead() {
     }
     
           // Check if we have leads in memory
+      console.log(`Current leadsData length: ${leadsData.length}`);
       if (leadsData.length > 0) {
         // Filter out leads that have already been emitted today
         const availableLeads = leadsData.filter(lead => !lead.emittedAt || 
           new Date(lead.emittedAt).toDateString() !== new Date().toDateString());
+        
+        console.log(`Available leads for emission: ${availableLeads.length}`);
+        if (availableLeads.length > 0) {
+          console.log('First available lead:', {
+            name: availableLeads[0].name,
+            mobile: availableLeads[0].mobile,
+            address: availableLeads[0].address
+          });
+        }
         
         if (availableLeads.length === 0) {
           console.log('All leads have been emitted today. Resetting for tomorrow...');
