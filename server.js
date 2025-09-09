@@ -282,8 +282,8 @@ async function emitNewLead() {
         const randomIndex = Math.floor(Math.random() * availableLeads.length);
         const lead = availableLeads[randomIndex]; // Get the original lead object
         
-        // Create a copy for emission
-        const leadForEmission = { ...lead };
+        // Create a copy for emission - convert Mongoose document to plain object
+        const leadForEmission = lead.toObject();
         
         // Randomly select a source (if configured)
         if (LEAD_EMISSION_CONFIG.randomizeSources) {
@@ -304,6 +304,7 @@ async function emitNewLead() {
       
         // Emit the lead to all connected clients
         console.log('Emitting lead to clients:', leadForEmission);
+        console.log('Lead name:', leadForEmission.name, 'Lead mobile:', leadForEmission.mobile);
         io.emit('newLead', leadForEmission);
         console.log(`Emitted lead ${dailyLeadCount}/${MAX_DAILY_LEADS} (Available: ${availableLeads.length}):`, lead.name, 'from source:', leadForEmission.source);
       

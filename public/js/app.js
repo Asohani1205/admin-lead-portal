@@ -44,6 +44,8 @@ function createActivityItem(lead) {
     const address = lead.address ? lead.address : '';
 
     console.log('Lead data for display:', { name, mobile, address, source: lead.source });
+    console.log('Raw lead object:', lead);
+    console.log('Lead name check:', lead.name, 'Type:', typeof lead.name);
 
     item.innerHTML = `
         <div class="flex justify-between items-start">
@@ -121,6 +123,7 @@ socket.on('disconnect', (reason) => {
 
 socket.on('newLead', (lead) => {
     console.log('🎯 Received new lead via Socket.IO:', lead);
+    console.log('Lead name:', lead.name, 'Lead mobile:', lead.mobile, 'Lead source:', lead.source);
     createActivityItem(lead);
     todayLeads++;
     totalLeadsProcessed++;
