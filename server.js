@@ -5,7 +5,7 @@ const io = require('socket.io')(http, {
   cors: {
     origin: [
       "http://localhost:8080",
-      "https://endlessportal.netlify.app",
+      "https://rajvanshportal.netlify.app",
       "http://localhost:3000",
       "https://admin-lead-portal-production-7382.up.railway.app",
       "https://admin-lead-portal.railway.app",
@@ -30,7 +30,7 @@ connectDB();
 app.use(cors({
   origin: [
     "http://localhost:8080",
-    "https://endlessportal.netlify.app",
+    "https://rajvanshportal.netlify.app",
     "http://localhost:3000",
     "https://admin-lead-portal-production-7382.up.railway.app",
     "https://admin-lead-portal.railway.app",
